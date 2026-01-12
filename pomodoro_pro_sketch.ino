@@ -32,8 +32,8 @@ const int BUZZ = 6;
 const int BTN  = 7;
 
 // === TIEMPOS DE PRUEBA ===
-const unsigned long WORK_TIME  = 5UL * 1000UL;   // 5 s
-const unsigned long BREAK_TIME = 3UL * 1000UL;   // 3 s
+const unsigned long WORK_TIME  = 10UL * 1000UL;   // 5 s
+const unsigned long BREAK_TIME = 10UL * 1000UL;   // 3 s
 
 
 // ================= FSM =================
@@ -80,6 +80,10 @@ void logState(const char* reason) {
 // ================= UTILIDADES =================
 float msToSeconds(unsigned long ms) {
   return ms / 1000.0;
+}
+
+float msToMinutes(unsigned long ms) {
+  return ms / 60000.0;
 }
 
 void setRGB(bool r, bool g, bool b) {
@@ -265,20 +269,58 @@ void loop() {
         return; // ✅ CLAVE: no ejecutes la lógica de tiempos en la misma vuelta
   }
 
-  // Lógica por estado
+
+
+ 
+
+  // --------------- WORK --------------- 
+  
   if (currentState == WORK) {
-    if (millis() - phaseStartTime >= phaseDuration) {   // (puedes usar millis() directamente)
+    if (millis() - phaseStartTime >= phaseDuration) {   
       beep();
+
+     
       pomodoroCount++;
+
+      // Calcular métricas
+      totalPomodoroCount++;
+      unsigned long workDurationMs = millis() - phaseStartTime;
+      totalFocusTimeMs += workDurationMs;
+
+      // Setear Campos
+      setTotalPomodoroCount(totalPomodoroCount);
+      setTotalFocusTime(totalFocusTimeMs);
+
+      // Enviar métricas
+      sendAllMetrics();
+
       
       if (pomodoroCount > 4) pomodoroCount = 4;
         updateProgressLEDs();
         enterBreak();
       }
   }
+
+
+  // --------------- BREAK --------------- 
+
     else if (currentState == BREAK) {
       if (!breakAwaitingButton && (millis() - phaseStartTime >= phaseDuration)) {
         beep();
+
+        // Calcular métricas
+        unsigned long breakDurationMs = millis() - phaseStartTime;
+        totalRestTimeMs += breakDurationMs;
+        totalSessionTimeMs = millis();
+
+        // Setear campos
+        setTotalRestingTime(totalRestTimeMs);
+        setTotalWorkingTime(totalSessionTimeMs);
+
+        //Enviar métricas
+        sendAllMetrics();
+
+        
         breakAwaitingButton = true;
         logState("BREAK finished (waiting for button)");
       }
