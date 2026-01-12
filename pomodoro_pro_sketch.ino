@@ -256,6 +256,11 @@ void loop() {
       enterWork();
     }
     else if (currentState == BREAK && breakAwaitingButton) {
+
+        unsigned long breakDurationMs = millis() - phaseStartTime;
+        totalRestTimeMs += breakDurationMs;
+
+        
       if (pomodoroCount >= 4) {
         pomodoroCount = 0;
         updateProgressLEDs();
@@ -290,6 +295,8 @@ void loop() {
       // Setear Campos
       setTotalPomodoroCount(totalPomodoroCount);
       setTotalFocusTime(totalFocusTimeMs);
+      setTotalRestingTime(totalRestTimeMs);
+      setTotalWorkingTime(totalSessionTimeMs);
 
       // Enviar métricas
       sendAllMetrics();
@@ -309,11 +316,13 @@ void loop() {
         beep();
 
         // Calcular métricas
-        unsigned long breakDurationMs = millis() - phaseStartTime;
-        totalRestTimeMs += breakDurationMs;
+        //unsigned long breakDurationMs = millis() - phaseStartTime;
+        //totalRestTimeMs += breakDurationMs;
         totalSessionTimeMs = millis();
 
         // Setear campos
+        setTotalPomodoroCount(totalPomodoroCount);
+        setTotalFocusTime(totalFocusTimeMs);
         setTotalRestingTime(totalRestTimeMs);
         setTotalWorkingTime(totalSessionTimeMs);
 
