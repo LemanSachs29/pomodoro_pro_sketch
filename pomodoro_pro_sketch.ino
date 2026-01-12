@@ -9,8 +9,12 @@ const bool RGB_COMMON_ANODE = true;
 
 // ThingSpeak
 WiFiClient tsClient;
-unsigned long channelID = 3225613;
-const char* writeAPIKey = "BVODGYYHR2I3HZJ2";
+unsigned long totalSessionTimeMs = 0;
+unsigned long totalFocusTimeMs   = 0;
+unsigned long totalRestTimeMs    = 0;
+
+int totalPomodoroCount = 0;
+
 
 // RGB (estado)
 const int RGB_R = 11;
@@ -74,6 +78,10 @@ void logState(const char* reason) {
 }
 
 // ================= UTILIDADES =================
+float msToSeconds(unsigned long ms) {
+  return ms / 1000.0;
+}
+
 void setRGB(bool r, bool g, bool b) {
   if (RGB_COMMON_ANODE) {
     digitalWrite(RGB_R, r ? LOW : HIGH);
@@ -141,12 +149,27 @@ void updateProgressLEDs() {
   digitalWrite(P4, pomodoroCount >= 4 ? HIGH : LOW);
 }
 
-void sendToThingSpeak(int cycleType, float durationMin) {
-  ThingSpeak.setField(2, durationMin);     // minutos reales
-  ThingSpeak.setField(3, pomodoroCount);   // acumulado
+void setTotalPomodoroCount(int totalPomodoros) {
+  ThingSpeak.setField(1, totalPomodoros);
+}
 
+void setTotalWorkingTime(unsigned long totalTimeMs) {
+  ThingSpeak.setField(2, msToSeconds(totalTimeMs));
+}
+
+void setTotalFocusTime(unsigned long focusTimeMs) {
+  ThingSpeak.setField(3, msToSeconds(focusTimeMs));
+}
+
+void setTotalRestingTime(unsigned long restingTimeMs) {
+  ThingSpeak.setField(4, msToSeconds(restingTimeMs));
+}
+
+void sendAllMetrics() {
   ThingSpeak.writeFields(channelID, writeAPIKey);
 }
+
+
 
 
 // ================= ENTRADAS DE ESTADO =================
@@ -215,7 +238,7 @@ void setup() {
 // ================= LOOP =================
 void loop() {
   unsigned long now = millis();
-
+  
   // Botón
   if (buttonPressed()) {
     Serial.print("[");
@@ -232,19 +255,13 @@ void loop() {
       if (pomodoroCount >= 4) {
         pomodoroCount = 0;
         updateProgressLEDs();
-      }
-
-      float breakDurationMin = (millis() - phaseStartTime) / 60000.0;
-
-      sendToThingSpeak(0, breakDurationMin);
-
+      }      
       enterWork();
-      }
+    }
 
         else {
           enterIdle();
         }
-
         return; // ✅ CLAVE: no ejecutes la lógica de tiempos en la misma vuelta
   }
 
@@ -253,27 +270,26 @@ void loop() {
     if (millis() - phaseStartTime >= phaseDuration) {   // (puedes usar millis() directamente)
       beep();
       pomodoroCount++;
-      sendToThingSpeak(1, (float)WORK_TIME / 60000.0f);
+      
       if (pomodoroCount > 4) pomodoroCount = 4;
-      updateProgressLEDs();
-      enterBreak();
-    }
+        updateProgressLEDs();
+        enterBreak();
+      }
   }
-  else if (currentState == BREAK) {
-    if (!breakAwaitingButton && (millis() - phaseStartTime >= phaseDuration)) {
-      beep();
-      breakAwaitingButton = true;
-      logState("BREAK finished (waiting for button)");
-    }
-if (breakAwaitingButton) {
-    if (now - waitBlinkLast >= WAIT_BLINK_MS) {
-      waitBlinkLast = now;
-      waitBlinkOn = !waitBlinkOn;
+    else if (currentState == BREAK) {
+      if (!breakAwaitingButton && (millis() - phaseStartTime >= phaseDuration)) {
+        beep();
+        breakAwaitingButton = true;
+        logState("BREAK finished (waiting for button)");
+      }
+  if (breakAwaitingButton) {
+      if (now - waitBlinkLast >= WAIT_BLINK_MS) {
+        waitBlinkLast = now;
+        waitBlinkOn = !waitBlinkOn;
 
-      if (waitBlinkOn) setRGB(false, false, true);   // azul
-      else             setRGB(false, false, false);  // apagado
+        if (waitBlinkOn) setRGB(false, false, true);   // azul
+        else             setRGB(false, false, false);  // apagado
+      }
     }
   }
 }
-    
-  }
