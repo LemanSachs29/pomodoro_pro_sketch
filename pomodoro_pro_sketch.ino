@@ -1,5 +1,16 @@
+#include <WiFi.h>
+#include <ThingSpeak.h>
+#include "arduino_secrets.h"
+
+
 // ================= CONFIG =================
-const bool RGB_COMMON_ANODE = true; // true si tu RGB es ánodo común
+
+const bool RGB_COMMON_ANODE = true; 
+
+// ThingSpeak
+WiFiClient tsClient;
+unsigned long channelID = 3225613;
+const char* writeAPIKey = "BVODGYYHR2I3HZJ2";
 
 // RGB (estado)
 const int RGB_R = 11;
@@ -19,6 +30,7 @@ const int BTN  = 7;
 // === TIEMPOS DE PRUEBA ===
 const unsigned long WORK_TIME  = 5UL * 1000UL;   // 5 s
 const unsigned long BREAK_TIME = 3UL * 1000UL;   // 3 s
+
 
 // ================= FSM =================
 enum State { IDLE, WORK, BREAK };
@@ -129,6 +141,14 @@ void updateProgressLEDs() {
   digitalWrite(P4, pomodoroCount >= 4 ? HIGH : LOW);
 }
 
+void sendToThingSpeak(int cycleType, float durationMin) {
+  ThingSpeak.setField(2, durationMin);     // minutos reales
+  ThingSpeak.setField(3, pomodoroCount);   // acumulado
+
+  ThingSpeak.writeFields(channelID, writeAPIKey);
+}
+
+
 // ================= ENTRADAS DE ESTADO =================
 void enterIdle() {
   currentState = IDLE;
@@ -162,6 +182,14 @@ void enterBreak() {
 
 // ================= SETUP =================
 void setup() {
+
+  WiFi.begin(SECRET_SSID, SECRET_PASS);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+  }
+
+  ThingSpeak.begin(tsClient);
+  
   Serial.begin(115200);
   delay(300);
 
@@ -205,13 +233,19 @@ void loop() {
         pomodoroCount = 0;
         updateProgressLEDs();
       }
-      enterWork();
-    }
-    else {
-      enterIdle();
-    }
 
-    return; // ✅ CLAVE: no ejecutes la lógica de tiempos en la misma vuelta
+      float breakDurationMin = (millis() - phaseStartTime) / 60000.0;
+
+      sendToThingSpeak(0, breakDurationMin);
+
+      enterWork();
+      }
+
+        else {
+          enterIdle();
+        }
+
+        return; // ✅ CLAVE: no ejecutes la lógica de tiempos en la misma vuelta
   }
 
   // Lógica por estado
@@ -219,6 +253,7 @@ void loop() {
     if (millis() - phaseStartTime >= phaseDuration) {   // (puedes usar millis() directamente)
       beep();
       pomodoroCount++;
+      sendToThingSpeak(1, (float)WORK_TIME / 60000.0f);
       if (pomodoroCount > 4) pomodoroCount = 4;
       updateProgressLEDs();
       enterBreak();
