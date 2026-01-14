@@ -42,10 +42,10 @@ const int RGB_B = 9;
 
 // ---------------- Progress LEDs ----------------
 // LEDs used to visualise pomodoro progress (1–4)
-const int P1 = 1;
-const int P2 = 2;
-const int P3 = 3;
-const int P4 = 4;
+const int P1 = 2;
+const int P2 = 3;
+const int P3 = 4;
+const int P4 = 5;
 
 
 
@@ -295,6 +295,9 @@ void enterWork() {
   currentState = WORK;
   phaseStartTime = millis();        // Mark start of WORK phase
   phaseDuration  = WORK_TIME;       // Asign work duration
+  pomodoroCount++;
+  if (pomodoroCount > 4) pomodoroCount = 4;
+  updateProgressLEDs();
   setRGB(true, false, false);       // Red indicates focus/work
   breakAwaitingButton = false;      // Reset break-related flag
   logState("ENTER");
@@ -438,10 +441,7 @@ void loop() {
     if (millis() - phaseStartTime >= phaseDuration) {   
 
       // Audible feedback to signal the end of the WORK phase
-      beep();
-
-      // Increment visual pomodoro counter (used for progress LEDs)
-      pomodoroCount++;
+      beep(); 
 
       // ---------------- Metric calculation ----------------
       // A pomodoro is counted only after a full WORK cycle completes
