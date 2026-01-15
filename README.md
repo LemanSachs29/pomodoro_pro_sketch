@@ -34,7 +34,7 @@ The system is built around a finite state machine controlling the Pomodoro workf
 The circuit was first designed and validated using Tinkercad before being implemented
 on physical hardware.
 
-![Circuit Design](images/circuit.png)
+![Circuit Design](images/circuitDesign.png)
 
 ## Cloud Integration
 
