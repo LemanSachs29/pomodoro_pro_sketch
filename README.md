@@ -41,9 +41,3 @@ on physical hardware.
 At the end of each Pomodoro cycle, session metrics such as total focus time,
 resting time, and completed cycles are uploaded to ThingSpeak. The platform
 provides time-series visualisation to support long-term productivity analysis.
-
-## Repository Structure
-
-- `/src` – Arduino source code
-- `/images` – Diagrams and project images
-- `README.md` – Project documentation
